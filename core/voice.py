@@ -1,47 +1,61 @@
 import speech_recognition as sr
-import winsound
+import os
+import json
 
+# Initialize the recognizer
 r = sr.Recognizer()
 
 def calibrate():
     with sr.Microphone() as source:
         print("🎤 Calibrating for fan noise... please stay quiet.")
-        # Step 1: Sample the room for 3 seconds instead of 2 for better accuracy
+        # Sample for 3 seconds for high accuracy
         r.adjust_for_ambient_noise(source, duration=3)
         
-        # Step 2: Set a higher floor. If 350 was spamming, 600-800 is safer.
-        # If it still spams, change 600 to 1000 below.
+        # Lock the threshold to prevent fan-noise "creeping"
         r.energy_threshold = max(r.energy_threshold, 600)
-        
-        # Step 3: Disable dynamic adjustment so he doesn't get "too sensitive" over time
         r.dynamic_energy_threshold = False
         
-        print(f"✅ Calibration complete. Threshold locked at: {int(r.energy_threshold)}")
+        print(f"✅ Offline Calibration complete. Threshold locked at: {int(r.energy_threshold)}")
 
 def listen(speaker_module=None):
     with sr.Microphone() as source:
-        # --- NOISE REJECTION SETTINGS ---
-        r.pause_threshold = 0.8       # Wait 0.8s of silence to end a sentence
-        r.phrase_threshold = 0.4      # Sound must last 0.4s to be speech (filters clicks)
-        r.non_speaking_duration = 0.3 # Snappy transition
+        # Snappy settings for fluid conversation
+        r.pause_threshold = 0.8
+        r.phrase_threshold = 0.4
+        r.non_speaking_duration = 0.3
         
-        print("🎤 Listening...")
+        print("🎤 Listening (Offline)...")
         try:
-            # timeout=None means he waits forever for you to start
-            # phrase_time_limit=None means he won't cut you off mid-sentence
+            # We still use sr.listen to handle the microphone energy logic
             audio = r.listen(source, timeout=None, phrase_time_limit=None)
             
-            # Instant Barge-in: Kill Jarvis's voice if he's talking
+            # Instant Barge-in: Kill audio as soon as speech is captured
             if speaker_module and speaker_module.is_speaking():
                 speaker_module.stop_speaking()
                 print("🛑 Interrupted playback.")
 
-            print("🧠 Recognizing...")
-            text = r.recognize_google(audio)
-            return text
+            print("🧠 Recognizing Locally...")
+
+            # --- OFFLINE RECOGNITION BLOCK ---
+            # This replaces r.recognize_google(audio)
+            # You must point 'model_path' to where you extracted the Vosk folder
+            model_path = os.path.join(os.getcwd(), "core", "vosk-model")
+            
+            if not os.path.exists(model_path):
+                print("❌ Error: Vosk model not found in core/vosk-model")
+                return None
+
+            # recognize_vosk is built into the speech_recognition library
+            raw_data = r.recognize_vosk(audio)
+            
+            # Vosk returns a JSON string, we need to extract the 'text' field
+            result = json.loads(raw_data)
+            text = result.get("text", "")
+            
+            return text if text.strip() else None
+
         except sr.UnknownValueError:
-            # This happens when it hears "something" but it's not words (like the fan)
             return None
         except Exception as e:
-            print(f"Voice Error: {e}")
+            print(f"Offline Voice Error: {e}")
             return None

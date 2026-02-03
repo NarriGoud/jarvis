@@ -1,6 +1,8 @@
 from fastapi import FastAPI
 import platform
 import time
+from tools.observer import GhostLog
+import threading
 
 from app.api import api
 from app.config import APP_NAME, VERSION
@@ -9,6 +11,14 @@ app = FastAPI(title=APP_NAME, version=VERSION)
 
 # Include your main chat/tools router
 app.include_router(api)
+# Initialize logging
+observer = GhostLog()
+
+@app.on_event("startup")
+async def start_observer():
+    # Run the monitor in a daemon thread so it doesn't block the API
+    thread = threading.Thread(target=observer.monitor, daemon=True)
+    thread.start()
 
 @app.get("/")
 def home():

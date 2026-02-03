@@ -10,7 +10,11 @@ from tools.alerts import send_telegram_alert
 from tools.shell import execute_shell
 from tools.network import ping_host, check_port
 from tools.vision import take_screenshot
+from tools.actions import create_fastapi_project, organize_images, media_command
 from tools import system, web
+from tools.observer import GhostLog
+
+observer = GhostLog()
 
 def think(user_input: str):
     """The central nervous system. Processes input, checks cache, and executes tools."""
@@ -69,6 +73,22 @@ def think(user_input: str):
                         elif action == "port": result = check_port(args.get("target"), args.get("port"))
                     elif func_name == "take_screenshot":
                         result = take_screenshot(args.get("filename", "screenshot.png"))
+                    elif func_name == "create_fastapi_project":
+                        result = create_fastapi_project(args.get("project_name", "MyFastAPIProject"))
+                    elif func_name == "organize_images":
+                        result = organize_images()
+                    elif func_name == "media_command":
+                        result = media_command(args.get("action"))
+                    if "summarize my day" in user_input or "what was i doing" in user_input.lower():
+                        history = observer.app_history
+                        if not history:
+                            return {"reply": "You haven't been active long enough for me to log anything yet, sir.", "source": "local"}
+                        
+                        summary = "You've been busy, Narendra. Here is your breakdown:\n"
+                        for app, duration in history.items():
+                            minutes = round(duration / 60, 1)
+                            summary += f"- {app}: {minutes} minutes\n"
+                        return {"reply": summary, "source": "local"}
                     elif func_name == "browser_control":
                         act, val = args.get("action"), args.get("query", "")
                         if act == "open": result = web.open_chrome()

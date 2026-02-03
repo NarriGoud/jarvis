@@ -144,7 +144,46 @@ TOOLS = [
                 "required": []
             }
         }
+    },
+    {
+    "type": "function",
+    "function": {
+      "name": "create_fastapi_project",
+      "description": "Creates a new FastAPI project directory with a standard folder structure (app, core, tools).",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "project_name": { "type": "string", "description": "The name for the new project folder." }
+        },
+        "required": ["project_name"]
+      }
     }
+  },
+  {
+    "type": "function",
+    "function": {
+      "name": "organize_screenshots",
+      "description": "Moves all files from the images folder into a backup subfolder to keep the workspace clean.",
+      "parameters": { "type": "object", "properties": {} }
+    }
+  },
+  {
+    "type": "function",
+    "function": {
+      "name": "media_control",
+      "description": "Controls system media playback like playing, pausing, skipping tracks, or adjusting volume.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "action": { 
+            "type": "string", 
+            "enum": ["play", "pause", "next", "previous", "volume up", "volume down", "mute"] 
+          }
+        },
+        "required": ["action"]
+      }
+    }
+  }
 ]
 
 def ask_groq(messages_list: list):

@@ -1,49 +1,46 @@
 import speech_recognition as sr
 import winsound
 
-# Initialize the recognizer globally so calibration persists
 r = sr.Recognizer()
 
 def calibrate():
-    """Samples background noise (like fans) to set a baseline energy threshold."""
     with sr.Microphone() as source:
         print("🎤 Calibrating for fan noise... please stay quiet.")
-        # Samples for 2 seconds to distinguish hum from voice
-        r.adjust_for_ambient_noise(source, duration=2)
-        # Allows the system to adapt if noise levels change slightly
-        r.dynamic_energy_threshold = True
-        # Small floor to ensure it doesn't get TOO sensitive in a dead silent room
-        if r.energy_threshold < 400:
-            r.energy_threshold = 400
-        print(f"✅ Calibration complete. Energy threshold set to: {int(r.energy_threshold)}")
+        # Step 1: Sample the room for 3 seconds instead of 2 for better accuracy
+        r.adjust_for_ambient_noise(source, duration=3)
+        
+        # Step 2: Set a higher floor. If 350 was spamming, 600-800 is safer.
+        # If it still spams, change 600 to 1000 below.
+        r.energy_threshold = max(r.energy_threshold, 600)
+        
+        # Step 3: Disable dynamic adjustment so he doesn't get "too sensitive" over time
+        r.dynamic_energy_threshold = False
+        
+        print(f"✅ Calibration complete. Threshold locked at: {int(r.energy_threshold)}")
 
-def listen():
+def listen(speaker_module=None):
     with sr.Microphone() as source:
-        # --- DYNAMIC SETTINGS ---
-        # 1. How long it waits after you stop talking (1.2s - 1.5s is the sweet spot)
-        r.pause_threshold = 1.3 
+        # --- NOISE REJECTION SETTINGS ---
+        r.pause_threshold = 0.8       # Wait 0.8s of silence to end a sentence
+        r.phrase_threshold = 0.4      # Sound must last 0.4s to be speech (filters clicks)
+        r.non_speaking_duration = 0.3 # Snappy transition
         
-        # 2. Ensures it doesn't cut you off if you take a quick breath mid-sentence
-        r.non_speaking_duration = 0.6 
-        
-        winsound.Beep(1000, 100)
         print("🎤 Listening...")
-        
         try:
-            # timeout: seconds to wait for speech to START
-            # phrase_time_limit: None lets you speak a long sentence without cutoff
-            audio = r.listen(source, timeout=5, phrase_time_limit=None)
+            # timeout=None means he waits forever for you to start
+            # phrase_time_limit=None means he won't cut you off mid-sentence
+            audio = r.listen(source, timeout=None, phrase_time_limit=None)
             
-            # Second beep to signal Jarvis has stopped recording and started thinking
-            winsound.Beep(700, 50) 
+            # Instant Barge-in: Kill Jarvis's voice if he's talking
+            if speaker_module and speaker_module.is_speaking():
+                speaker_module.stop_speaking()
+                print("🛑 Interrupted playback.")
+
             print("🧠 Recognizing...")
-            
             text = r.recognize_google(audio)
             return text
-        except sr.WaitTimeoutError:
-            return None
         except sr.UnknownValueError:
-            # This triggers if it hears sound but can't identify words
+            # This happens when it hears "something" but it's not words (like the fan)
             return None
         except Exception as e:
             print(f"Voice Error: {e}")

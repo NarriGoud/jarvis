@@ -9,6 +9,7 @@ from tools.knowledge import query_knowledge_base as get_personal_knowledge
 from tools.alerts import send_telegram_alert
 from tools.shell import execute_shell
 from tools.network import ping_host, check_port
+from tools.vision import take_screenshot
 from tools import system, web
 
 def think(user_input: str):
@@ -66,6 +67,8 @@ def think(user_input: str):
                         action = args.get("action")
                         if action == "ping": result = ping_host(args.get("target", "8.8.8.8"))
                         elif action == "port": result = check_port(args.get("target"), args.get("port"))
+                    elif func_name == "take_screenshot":
+                        result = take_screenshot(args.get("filename", "screenshot.png"))
                     elif func_name == "browser_control":
                         act, val = args.get("action"), args.get("query", "")
                         if act == "open": result = web.open_chrome()

@@ -132,6 +132,18 @@ TOOLS = [
                 "required": ["action", "target"]
             }
         }
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "take_screenshot",
+            "description": "Captures a screenshot of the current screen and saves it to the root 'images' directory. Use this when the user asks to capture the screen or 'look' at something on their monitor.",
+            "parameters": {
+                "type": "object",
+                "properties": {},
+                "required": []
+            }
+        }
     }
 ]
 

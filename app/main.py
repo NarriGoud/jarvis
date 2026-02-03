@@ -7,13 +7,18 @@ from app.config import APP_NAME, VERSION
 
 app = FastAPI(title=APP_NAME, version=VERSION)
 
+# Include your main chat/tools router
 app.include_router(api)
-
 
 @app.get("/")
 def home():
     return {
-        "status": "Jarvis is online 🚀",
+        "status": f"{APP_NAME} is online 🚀",
         "system": platform.system(),
         "time": time.ctime()
     }
+
+@app.get("/health")
+def health():
+    """Simple endpoint for the .bat file to check if the Brain is awake."""
+    return {"status": "ready"}

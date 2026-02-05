@@ -14,12 +14,6 @@ app.include_router(api)
 # Initialize logging
 observer = GhostLog()
 
-@app.on_event("startup")
-async def start_observer():
-    # Run the monitor in a daemon thread so it doesn't block the API
-    thread = threading.Thread(target=observer.monitor, daemon=True)
-    thread.start()
-
 @app.get("/")
 def home():
     return {

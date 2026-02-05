@@ -1,6 +1,5 @@
 import speech_recognition as sr
 import os
-import json
 
 # Initialize the recognizer
 r = sr.Recognizer()
@@ -8,54 +7,48 @@ r = sr.Recognizer()
 def calibrate():
     with sr.Microphone() as source:
         print("🎤 Calibrating for fan noise... please stay quiet.")
-        # Sample for 3 seconds for high accuracy
+        # Sample for 3 seconds for better accuracy
         r.adjust_for_ambient_noise(source, duration=3)
         
-        # Lock the threshold to prevent fan-noise "creeping"
-        r.energy_threshold = max(r.energy_threshold, 600)
+        # High threshold to filter out your PC fan
+        r.energy_threshold = max(r.energy_threshold, 800)
         r.dynamic_energy_threshold = False
         
-        print(f"✅ Offline Calibration complete. Threshold locked at: {int(r.energy_threshold)}")
+        print(f"✅ Online Calibration complete. Threshold locked at: {int(r.energy_threshold)}")
 
 def listen(speaker_module=None):
     with sr.Microphone() as source:
-        # Snappy settings for fluid conversation
+        # Settings for a snappier feel
         r.pause_threshold = 0.8
         r.phrase_threshold = 0.4
         r.non_speaking_duration = 0.3
         
-        print("🎤 Listening (Offline)...")
+        print("🎤 Listening (Online)...")
         try:
-            # We still use sr.listen to handle the microphone energy logic
+            # timeout=None waits forever for you to start
             audio = r.listen(source, timeout=None, phrase_time_limit=None)
             
-            # Instant Barge-in: Kill audio as soon as speech is captured
+            # Instant Barge-in: Kill Jarvis's voice as soon as you stop talking
             if speaker_module and speaker_module.is_speaking():
                 speaker_module.stop_speaking()
                 print("🛑 Interrupted playback.")
 
-            print("🧠 Recognizing Locally...")
-
-            # --- OFFLINE RECOGNITION BLOCK ---
-            # This replaces r.recognize_google(audio)
-            # You must point 'model_path' to where you extracted the Vosk folder
-            model_path = os.path.join(os.getcwd(), "core", "vosk-model")
+            print("🧠 Recognizing (Google)...")
             
-            if not os.path.exists(model_path):
-                print("❌ Error: Vosk model not found in core/vosk-model")
-                return None
-
-            # recognize_vosk is built into the speech_recognition library
-            raw_data = r.recognize_vosk(audio)
+            # Reverting to Google Cloud Recognition
+            text = r.recognize_google(audio)
             
-            # Vosk returns a JSON string, we need to extract the 'text' field
-            result = json.loads(raw_data)
-            text = result.get("text", "")
+            if text.strip():
+                return text.lower().strip()
             
-            return text if text.strip() else None
+            return None
 
         except sr.UnknownValueError:
+            # This triggers if it hears noise but no words
+            return None
+        except sr.RequestError as e:
+            print(f"⚠️ Google Service Error: {e}")
             return None
         except Exception as e:
-            print(f"Offline Voice Error: {e}")
+            print(f"Voice Error: {e}")
             return None
